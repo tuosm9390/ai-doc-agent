@@ -1,4 +1,5 @@
 import anthropic
+import json
 import time
 from typing import AsyncGenerator
 
@@ -60,7 +61,6 @@ async def step_eval(draft: str, context: dict) -> dict:
         messages=[{"role": "user", "content": eval_prompt}],
     )
 
-    import json
     text = message.content[0].text.strip()
     # Extract JSON from possible markdown code blocks
     if "```" in text:
