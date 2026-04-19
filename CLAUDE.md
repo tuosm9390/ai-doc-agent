@@ -12,7 +12,15 @@ SSE events streamed to frontend via `/generate` endpoint.
 
 ## Testing
 
-No test framework yet. Run backend: `cd backend && uvicorn main:app --reload --port 8000`
+- **Backend:** `cd backend && python -m pytest tests/ -v`
+- **Frontend:** `cd frontend && npx vitest run`
+- See `TESTING.md` for full conventions
+
+Test expectations:
+- When writing new functions, write a corresponding test
+- When fixing a bug, write a regression test
+- When adding error handling, write a test that triggers the error
+- Never commit code that makes existing tests fail
 
 ## gstack
 
