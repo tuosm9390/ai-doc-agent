@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pipeline import run_pipeline
 
@@ -26,9 +26,9 @@ app.add_middleware(
 
 
 class GenerateRequest(BaseModel):
-    topic: str
-    doc_type: str = "일반 문서"
-    instructions: Optional[str] = None
+    topic: str = Field(..., max_length=500)
+    doc_type: str = Field("일반 문서", max_length=100)
+    instructions: Optional[str] = Field(None, max_length=2000)
 
 
 def format_sse(data: dict) -> str:

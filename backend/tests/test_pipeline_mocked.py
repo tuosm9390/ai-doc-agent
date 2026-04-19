@@ -62,6 +62,38 @@ async def test_run_pipeline_emits_complete_event():
 
 
 @pytest.mark.asyncio
+async def test_step_eval_clamps_score_above_10():
+    """Scores above 10 returned by LLM are clamped to 10."""
+    eval_data = {"overall": 12, "clarity": 11, "structure": 15, "completeness": 10}
+    mock_response = _mock_message(json.dumps(eval_data))
+    with patch("pipeline.client.messages.create", new=AsyncMock(return_value=mock_response)):
+        result = await step_eval("# Draft", {"topic": "AI", "doc_type": "일반 문서"})
+    assert result["overall"] == 10
+    assert result["clarity"] == 10
+    assert result["structure"] == 10
+
+
+@pytest.mark.asyncio
+async def test_step_eval_clamps_score_below_1():
+    """Scores below 1 returned by LLM are clamped to 1."""
+    eval_data = {"overall": 0, "clarity": -3, "structure": 1, "completeness": 0}
+    mock_response = _mock_message(json.dumps(eval_data))
+    with patch("pipeline.client.messages.create", new=AsyncMock(return_value=mock_response)):
+        result = await step_eval("# Draft", {"topic": "AI", "doc_type": "일반 문서"})
+    assert result["overall"] == 1
+    assert result["clarity"] == 1
+
+
+@pytest.mark.asyncio
+async def test_step_eval_raises_on_invalid_json():
+    """step_eval raises ValueError when LLM returns non-JSON."""
+    mock_response = _mock_message("이건 JSON이 아닙니다.")
+    with patch("pipeline.client.messages.create", new=AsyncMock(return_value=mock_response)):
+        with pytest.raises(ValueError):
+            await step_eval("# Draft", {"topic": "AI", "doc_type": "일반 문서"})
+
+
+@pytest.mark.asyncio
 async def test_run_pipeline_step_sequence():
     """run_pipeline yields running→done pairs for all 4 steps before complete."""
     draft_response = _mock_message("draft")

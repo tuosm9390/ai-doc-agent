@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import StepList from "@/components/StepList";
@@ -50,9 +50,16 @@ export default function Home() {
   const [stepEvents, setStepEvents] = useState<StepEvent[]>([]);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleGenerate = useCallback(async () => {
     if (!topic.trim()) return;
+
+    // Cancel any in-flight request before starting a new one (#5)
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setAppState("running");
     setStepEvents([]);
     setResult(null);
@@ -63,6 +70,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic, doc_type: docType, instructions }),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
@@ -81,21 +89,32 @@ export default function Home() {
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
-          const event: PipelineEvent = JSON.parse(line.slice(6));
+
+          // Skip malformed SSE lines without crashing (#3)
+          let event: PipelineEvent;
+          try {
+            event = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
 
           if (event.step === "complete") {
             setResult(event.result);
             setAppState("result");
-            // Save to localStorage for dashboard
-            const history = JSON.parse(localStorage.getItem("doc-history") ?? "[]");
-            history.unshift({
-              id: Date.now().toString(),
-              topic,
-              doc_type: docType,
-              result: event.result,
-              created_at: Date.now(),
-            });
-            localStorage.setItem("doc-history", JSON.stringify(history.slice(0, 50)));
+            // Save to localStorage for dashboard (#4)
+            try {
+              const history = JSON.parse(localStorage.getItem("doc-history") ?? "[]");
+              history.unshift({
+                id: Date.now().toString(),
+                topic,
+                doc_type: docType,
+                result: event.result,
+                created_at: Date.now(),
+              });
+              localStorage.setItem("doc-history", JSON.stringify(history.slice(0, 50)));
+            } catch {
+              // QuotaExceededError or unavailable — skip silently
+            }
           } else if (event.step === "error") {
             setError(event.message);
             setAppState("error");
@@ -108,6 +127,7 @@ export default function Home() {
         }
       }
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setError(e instanceof Error ? e.message : "알 수 없는 오류");
       setAppState("error");
     }

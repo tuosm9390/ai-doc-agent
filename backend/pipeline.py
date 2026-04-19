@@ -1,10 +1,34 @@
 import anthropic
+import httpx
 import json
 import time
 from typing import AsyncGenerator
 
+from pydantic import BaseModel, field_validator
 
-client = anthropic.AsyncAnthropic()
+
+class EvalResult(BaseModel):
+    overall: int
+    clarity: int
+    structure: int
+    completeness: int
+    feedback: str = ""
+
+    @field_validator("overall", "clarity", "structure", "completeness", mode="before")
+    @classmethod
+    def clamp_score(cls, v):
+        try:
+            return max(1, min(10, int(v)))
+        except (TypeError, ValueError):
+            return 1
+
+
+client = anthropic.AsyncAnthropic(
+    http_client=httpx.AsyncClient(
+        limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+        timeout=httpx.Timeout(60.0, connect=10.0),
+    )
+)
 
 
 async def step_context(topic: str, doc_type: str, instructions: str) -> dict:
@@ -65,7 +89,8 @@ async def step_eval(draft: str, context: dict) -> dict:
     # Extract JSON from possible markdown code blocks
     if "```" in text:
         text = text.split("```")[1].replace("json", "").strip()
-    return json.loads(text)
+    parsed = json.loads(text)
+    return EvalResult.model_validate(parsed).model_dump()
 
 
 async def step_format(draft: str, eval_result: dict) -> dict:
