@@ -38,3 +38,15 @@ def test_format_sse():
     assert result.startswith("data: ")
     assert result.endswith("\n\n")
     assert '"step": 1' in result
+
+
+def test_generate_topic_too_long():
+    """topic > 500 chars must be rejected with 422."""
+    response = client.post("/generate", json={"topic": "a" * 501})
+    assert response.status_code == 422
+
+
+def test_generate_instructions_too_long():
+    """instructions > 2000 chars must be rejected with 422."""
+    response = client.post("/generate", json={"topic": "AI", "instructions": "x" * 2001})
+    assert response.status_code == 422
