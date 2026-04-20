@@ -1,8 +1,20 @@
 # Changelog
 
+## [0.1.1.0] - 2026-04-20
+
+### Fixed
+
+- LLM JSON trust boundary: `EvalResult` Pydantic model validates and clamps eval scores to 1–10 range
+- Input length limits: `topic` max 500 chars, `instructions` max 2000 chars (server-side 422)
+- SSE error parser: `JSON.parse` wrapped in try/catch, malformed `data:` lines skipped instead of crashing
+- localStorage error handling: `setItem` wrapped in try/catch to prevent `QuotaExceededError` silent failure
+- Race condition on rapid submit: `AbortController` cancels the previous in-flight SSE stream
+- Anthropic connection pool: `httpx.AsyncClient` configured with `max_connections=10`, 60s read / 10s connect timeout
+
 ## [0.1.0.0] - 2026-04-19
 
 ### Added
+
 - FastAPI backend with SSE streaming `/generate` endpoint
 - 4-step async pipeline: context → draft (Claude Haiku) → eval (Claude Sonnet) → format
 - CORS restricted to `FRONTEND_URL` env variable
@@ -18,6 +30,7 @@
 - TESTING.md with framework conventions and run commands
 
 ### Fixed
+
 - Moved `import json` from inside `step_eval()` to module top level
 - CORS policy tightened from wildcard to explicit origin
 - `requirements.txt` dependency conflict: `supabase>=2.10.0`, `httpx>=0.27.0`
