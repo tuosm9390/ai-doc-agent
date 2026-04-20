@@ -29,9 +29,9 @@ npx vitest run
 
 ### Backend Unit Tests (`backend/tests/`)
 
-- **test_main.py** — FastAPI endpoints: `/health`, `/generate` validation, `format_sse`
+- **test_main.py** — FastAPI endpoints: `/health`, `/generate` validation, `format_sse`; input length limits (topic ≤500, instructions ≤2000)
 - **test_pipeline.py** — Pipeline step functions: `step_context`, `step_format` (pure, no API calls)
-- **test_pipeline_mocked.py** — `step_draft`, `step_eval`, `run_pipeline` with `AsyncMock` patching `pipeline.client.messages.create`; covers plain JSON and markdown code block responses
+- **test_pipeline_mocked.py** — `step_draft`, `step_eval`, `run_pipeline` with `AsyncMock` patching `pipeline.client.messages.create`; covers plain JSON, markdown code block, score clamping (above 10 / below 1), invalid JSON rejection
 - **test_generate_endpoint.py** — `/generate` SSE streaming happy path + error event branch via `mock.patch("main.run_pipeline")`
 
 ### Frontend Unit Tests (`frontend/src/__tests__/`)

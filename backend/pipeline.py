@@ -1,10 +1,13 @@
-import anthropic
-import httpx
 import json
+import os
 import time
 from typing import AsyncGenerator
 
+from dotenv import load_dotenv
+from google import genai
 from pydantic import BaseModel, field_validator
+
+load_dotenv()
 
 
 class EvalResult(BaseModel):
@@ -23,27 +26,24 @@ class EvalResult(BaseModel):
             return 1
 
 
-client = anthropic.AsyncAnthropic(
-    http_client=httpx.AsyncClient(
-        limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
-        timeout=httpx.Timeout(60.0, connect=10.0),
-    )
-)
+client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+
+DRAFT_MODEL = "gemini-2.5-flash"
+EVAL_MODEL = "gemini-2.5-flash"
 
 
 async def step_context(topic: str, doc_type: str, instructions: str) -> dict:
     """Step 1: Collect and structure context."""
-    context = {
+    return {
         "topic": topic,
         "doc_type": doc_type,
         "instructions": instructions,
         "collected_at": time.time(),
     }
-    return context
 
 
 async def step_draft(context: dict) -> str:
-    """Step 2: Generate draft using Claude Haiku."""
+    """Step 2: Generate draft using Gemini Flash."""
     prompt = f"""문서 유형: {context['doc_type']}
 주제: {context['topic']}
 추가 지시사항: {context['instructions'] or '없음'}
@@ -51,16 +51,15 @@ async def step_draft(context: dict) -> str:
 위 정보를 바탕으로 전문적이고 구조적인 문서를 작성해주세요.
 마크다운 형식으로 작성하되, 명확한 제목, 본문, 결론을 포함해주세요."""
 
-    message = await client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=2048,
-        messages=[{"role": "user", "content": prompt}],
+    response = await client.aio.models.generate_content(
+        model=DRAFT_MODEL,
+        contents=prompt,
     )
-    return message.content[0].text
+    return response.text
 
 
 async def step_eval(draft: str, context: dict) -> dict:
-    """Step 3: Evaluate draft using Claude Sonnet as judge."""
+    """Step 3: Evaluate draft using Gemini Flash as judge."""
     eval_prompt = f"""다음 문서를 평가해주세요. 아래 기준으로 1-10점을 매겨주세요.
 
 문서 유형: {context['doc_type']}
@@ -79,14 +78,12 @@ async def step_eval(draft: str, context: dict) -> dict:
   "feedback": "<한 문장 피드백>"
 }}"""
 
-    message = await client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=512,
-        messages=[{"role": "user", "content": eval_prompt}],
+    response = await client.aio.models.generate_content(
+        model=EVAL_MODEL,
+        contents=eval_prompt,
     )
 
-    text = message.content[0].text.strip()
-    # Extract JSON from possible markdown code blocks
+    text = response.text.strip()
     if "```" in text:
         text = text.split("```")[1].replace("json", "").strip()
     parsed = json.loads(text)

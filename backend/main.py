@@ -3,14 +3,15 @@ import os
 from typing import Optional
 
 from dotenv import load_dotenv
+
+load_dotenv()  # must run before pipeline import so API key env vars are set
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from pipeline import run_pipeline
-
-load_dotenv()
 
 app = FastAPI(title="AI Doc Agent", version="0.1.0")
 

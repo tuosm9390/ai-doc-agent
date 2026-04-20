@@ -12,7 +12,7 @@ Post-MVP items from adversarial review (v0.1.0.0).
 ## Reliability
 
 - [x] **Race condition on rapid submit** — AbortController cancels previous in-flight SSE request.
-- [x] **Anthropic client connection pool** — `httpx.AsyncClient` with `max_connections=10`, 60s/10s timeout.
+- [x] **Connection pool** — Switched to Google Gemini (`google-genai`); Anthropic client removed.
 
 ## Done
 
