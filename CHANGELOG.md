@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2.0] - 2026-04-20
+
+### Changed
+
+- LLM provider switched from Anthropic to Google Gemini (`google-genai` SDK)
+- Draft and eval steps now use `gemini-2.5-flash`
+- `load_dotenv()` moved before pipeline import to ensure API key is available at client init time
+
 ## [0.1.1.0] - 2026-04-20
 
 ### Fixed

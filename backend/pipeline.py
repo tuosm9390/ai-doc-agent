@@ -28,8 +28,8 @@ class EvalResult(BaseModel):
 
 client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
 
-DRAFT_MODEL = "gemini-2.0-flash"
-EVAL_MODEL = "gemini-2.0-flash"
+DRAFT_MODEL = "gemini-2.5-flash"
+EVAL_MODEL = "gemini-2.5-flash"
 
 
 async def step_context(topic: str, doc_type: str, instructions: str) -> dict:
